@@ -7,6 +7,8 @@ import { ChatArea } from './chat-area';
 import { getUserData } from '@/lib/utils';
 import { WebRTCService } from '@/lib/webrtc';
 import { MessageStore } from '@/lib/db';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from './ui/button';
 
 export type User = {
   id: string;
@@ -38,6 +40,25 @@ export function Chat() {
   const [users, setUsers] = useState<User[]>([]);
   const [webrtc, setWebrtc] = useState<WebRTCService | null>(null);
   const [messageStore] = useState(() => new MessageStore());
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测是否为移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // 返回用户列表（仅在移动端有效）
+  const handleBackToUserList = () => {
+    setSelectedUser(null);
+  };
 
   useEffect(() => {
     // Update current user when localStorage changes
@@ -73,7 +94,7 @@ export function Chat() {
             (message.senderId === selectedUser.id || 
              message.receiverId === selectedUser.id)) {
           const messages = await messageStore.getMessages(currentUser.id, selectedUser.id);
-          // Update ChatArea component with new messages
+          setMessages(messages);
         }
       }
     );
@@ -91,21 +112,55 @@ export function Chat() {
     }
   }, [webrtc, currentUser]);
 
+  useEffect(() => {
+    // 当选择用户变化时，加载消息
+    if (selectedUser && messageStore) {
+      messageStore.getMessages(currentUser.id, selectedUser.id)
+        .then(setMessages)
+        .catch(console.error);
+    }
+  }, [selectedUser, currentUser.id, messageStore]);
+
   return (
     <div className="flex h-[100dvh] flex-col md:flex-row">
-      <UserList
-        users={users}
-        selectedUser={selectedUser}
-        onSelectUser={setSelectedUser}
-        currentUser={currentUser}
-      />
-      <ChatArea 
-        selectedUser={selectedUser} 
-        currentUser={currentUser}
-        webrtc={webrtc}
-        messageStore={messageStore}
-      />
-      <Navigation />
+      {/* 在移动端，如果选择了用户，则隐藏用户列表 */}
+      {(!isMobile || (isMobile && !selectedUser)) && (
+        <UserList
+          users={users}
+          selectedUser={selectedUser}
+          onSelectUser={setSelectedUser}
+          currentUser={currentUser}
+        />
+      )}
+      
+      {/* 在移动端，如果选择了用户，则显示聊天区域 */}
+      {(!isMobile || (isMobile && selectedUser)) && (
+        <div className="flex flex-1 flex-col">
+          {isMobile && selectedUser && (
+            <div className="flex items-center border-b p-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackToUserList}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <span className="font-medium">返回</span>
+            </div>
+          )}
+          <ChatArea 
+            selectedUser={selectedUser} 
+            currentUser={currentUser}
+            webrtc={webrtc}
+            messageStore={messageStore}
+            messages={messages}
+          />
+        </div>
+      )}
+      
+      {/* 只在未选择用户时显示导航栏 */}
+      {!isMobile || !selectedUser ? <Navigation /> : null}
     </div>
   );
 }

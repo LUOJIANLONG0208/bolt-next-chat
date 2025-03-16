@@ -118,13 +118,29 @@ export class WebRTCService {
 
     peer.on('connect', () => {
       console.log('Peer connection established:', remoteId);
-      // Send initial user info
-      this.broadcastUserInfo({
+      // 获取本地存储的用户信息
+      const userData = localStorage.getItem('user');
+      let userInfo = {
         id: this.localId,
         name: 'User ' + this.localId,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.localId}`,
         online: true
-      });
+      };
+      
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          userInfo = {
+            ...parsedUser,
+            online: true
+          };
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      // 发送用户信息
+      this.broadcastUserInfo(userInfo);
     });
 
     peer.on('error', (err) => {

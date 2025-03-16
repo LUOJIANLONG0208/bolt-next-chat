@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigation } from './navigation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,6 +18,9 @@ export function UserSettings() {
     const updatedUser = { ...user, name: name.trim() };
     localStorage.setItem('user', JSON.stringify(updatedUser));
     setUser(updatedUser);
+    
+    // 触发storage事件，以便其他组件可以监听到更改
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleGenerateAvatar = () => {
@@ -27,6 +30,9 @@ export function UserSettings() {
     };
     localStorage.setItem('user', JSON.stringify(updatedUser));
     setUser(updatedUser);
+    
+    // 触发storage事件，以便其他组件可以监听到更改
+    window.dispatchEvent(new Event('storage'));
   };
 
   return (
@@ -39,7 +45,7 @@ export function UserSettings() {
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
               <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
+              <AvatarFallback>{user?.name ? user?.name[0] : ''}</AvatarFallback>
             </Avatar>
             <Button onClick={handleGenerateAvatar}>Generate New Avatar</Button>
           </div>

@@ -9,8 +9,8 @@ export function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t bg-background">
-      <div className="mx-auto flex max-w-md justify-around p-2">
+    <nav className="fixed bottom-0 left-0 right-0 border-t bg-background z-10">
+      <div className="mx-auto flex justify-around p-2">
         <Link
           href="/"
           className={cn(
@@ -19,7 +19,7 @@ export function Navigation() {
           )}
         >
           <MessageSquare className="h-6 w-6" />
-          <span className="text-xs">Chat</span>
+          <span className="text-xs">聊天</span>
         </Link>
         <Link
           href="/settings"
@@ -29,7 +29,7 @@ export function Navigation() {
           )}
         >
           <Settings className="h-6 w-6" />
-          <span className="text-xs">Settings</span>
+          <span className="text-xs">设置</span>
         </Link>
       </div>
     </nav>
