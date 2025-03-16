@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 let userCounter = 0;
 
 export function generateName(): string {
@@ -28,9 +36,9 @@ export function getUserData() {
   
   // Generate new user data only if it doesn't exist
   const newUser = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: generateName(),
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${crypto.randomUUID()}`,
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${generateUUID()}`,
     online: true,
   };
   
