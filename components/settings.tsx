@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getUserData } from '@/lib/utils';
+import { getUserData, generateUUID } from '@/lib/utils';
 
 export function UserSettings() {
   const [user, setUser] = useState(() => getUserData());
@@ -26,7 +26,7 @@ export function UserSettings() {
   const handleGenerateAvatar = () => {
     const updatedUser = {
       ...user,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${crypto.randomUUID()}`,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${generateUUID()}`,
     };
     localStorage.setItem('user', JSON.stringify(updatedUser));
     setUser(updatedUser);
