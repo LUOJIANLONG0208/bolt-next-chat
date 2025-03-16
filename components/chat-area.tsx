@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Send, Smile } from 'lucide-react';
+import { Send, Smile, ArrowDown } from 'lucide-react';
 import { Message, User } from './chat';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
@@ -30,24 +30,114 @@ export function ChatArea({
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // 检测是否需要显示滚动到底部按钮
+  const checkScrollPosition = () => {
+    if (scrollAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+      // 如果距离底部超过200px，显示滚动按钮
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+      setShowScrollButton(!isNearBottom);
+    }
+  };
+
+  // 监听滚动事件
+  useEffect(() => {
+    const scrollElement = scrollAreaRef.current;
+    if (scrollElement) {
+      scrollElement.addEventListener('scroll', checkScrollPosition);
+      return () => scrollElement.removeEventListener('scroll', checkScrollPosition);
+    }
+  }, []);
 
   // 自动滚动到底部
-  useEffect(() => {
+  const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const scrollElement = scrollAreaRef.current;
-      scrollElement.scrollTop = scrollElement.scrollHeight;
+      // 直接设置滚动位置，不使用动画效果，确保立即滚动到底部
+      scrollElement.scrollTop = scrollElement.scrollHeight + 1000;
+      console.log('立即滚动到底部', scrollElement.scrollHeight);
+      
+      // 为确保在所有情况下都能滚动到底部，使用多个延时调用
+      setTimeout(() => {
+        if (scrollElement) {
+          scrollElement.scrollTop = scrollElement.scrollHeight + 1000;
+        }
+      }, 50);
+      
+      setTimeout(() => {
+        if (scrollElement) {
+          scrollElement.scrollTop = scrollElement.scrollHeight + 1000;
+        }
+      }, 150);
+      
+      setTimeout(() => {
+        if (scrollElement) {
+          scrollElement.scrollTop = scrollElement.scrollHeight + 1000;
+        }
+      }, 300);
     }
+  };
+
+  // 消息变化时滚动到底部
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
+  // 当组件挂载和更新时滚动到底部
+  useEffect(() => {
+    // 组件挂载时滚动到底部
+    scrollToBottom();
+    
+    // 监听窗口大小变化，确保在窗口大小变化时也滚动到底部
+    const handleResize = () => {
+      scrollToBottom();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // 使用 MutationObserver 监听消息容器的变化
+    if (scrollAreaRef.current) {
+      const observer = new MutationObserver(scrollToBottom);
+      observer.observe(scrollAreaRef.current, { childList: true, subtree: true });
+      
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // 初始加载消息时滚动到底部
   useEffect(() => {
     if (externalMessages) {
       setMessages(externalMessages);
+      scrollToBottom();
     } else if (selectedUser && messageStore) {
       messageStore.getMessages(currentUser.id, selectedUser.id)
-        .then(setMessages)
+        .then((msgs) => {
+          setMessages(msgs);
+          scrollToBottom();
+        })
         .catch(console.error);
     }
   }, [selectedUser, currentUser.id, messageStore, externalMessages]);
+
+  // 获取用户信息（用于显示头像和名称）
+  const getUserInfo = (userId: string) => {
+    if (userId === currentUser.id) {
+      return currentUser;
+    }
+    if (selectedUser && userId === selectedUser.id) {
+      return selectedUser;
+    }
+    return null;
+  };
 
   const handleSendMessage = async () => {
     if (!selectedUser || !newMessage.trim() || !webrtc) return;
@@ -67,10 +157,11 @@ export function ChatArea({
     webrtc.sendMessage(message);
     setNewMessage('');
     
-    // 发送后聚焦输入框
+    // 发送后聚焦输入框并滚动到底部
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    scrollToBottom();
   };
 
   // 格式化时间
@@ -114,8 +205,8 @@ export function ChatArea({
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className="flex flex-1 flex-col h-full">
-      <div className="border-b p-4">
+    <div className="flex flex-1 flex-col h-full relative">
+      <div className="border-b p-4 sticky top-0 z-10 bg-background">
         <div className="flex items-center space-x-4">
           <Avatar>
             <AvatarImage src={selectedUser.avatar} alt={selectedUser.name} />
@@ -131,8 +222,16 @@ export function ChatArea({
       </div>
 
       <div 
-        className="flex-1 p-4 overflow-y-auto" 
+        className="flex-1 p-4 overflow-y-auto overscroll-none chat-area-scroll" 
         ref={scrollAreaRef}
+        onScroll={checkScrollPosition}
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'thin',
+          paddingBottom: '60px', // 确保底部有足够的空间，不被输入框遮挡
+          paddingTop: '10px' // 确保顶部有足够的空间，不被头部遮挡
+        }}
       >
         {messageGroups.length > 0 ? (
           <div className="space-y-6 pb-4">
@@ -146,6 +245,8 @@ export function ChatArea({
                 
                 {group.messages.map((message) => {
                   const isCurrentUser = message.senderId === currentUser.id;
+                  const senderInfo = getUserInfo(message.senderId);
+                  
                   return (
                     <div
                       key={message.id}
@@ -157,11 +258,11 @@ export function ChatArea({
                       {!isCurrentUser && (
                         <Avatar className="h-8 w-8 mb-1">
                           <AvatarImage 
-                            src={message.senderAvatar} 
-                            alt={message.senderName} 
+                            src={senderInfo?.avatar || message.senderAvatar} 
+                            alt={senderInfo?.name || message.senderName} 
                           />
                           <AvatarFallback>
-                            {message.senderName ? message.senderName[0] : ''}
+                            {senderInfo?.name?.[0] || message.senderName?.[0] || ''}
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -201,7 +302,18 @@ export function ChatArea({
         )}
       </div>
 
-      <div className="border-t p-3 sticky bottom-0 bg-background">
+      {/* 滚动到底部按钮 */}
+      {showScrollButton && (
+        <Button
+          className="absolute bottom-20 right-4 rounded-full h-10 w-10 flex items-center justify-center shadow-lg"
+          onClick={scrollToBottom}
+          size="icon"
+        >
+          <ArrowDown className="h-5 w-5" />
+        </Button>
+      )}
+
+      <div className="border-t p-3 sticky bottom-0 bg-background z-10">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -223,6 +335,13 @@ export function ChatArea({
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="输入消息..."
             className="flex-1 rounded-full"
+            onKeyDown={(e) => {
+              // 按下回车键发送消息，但按下Shift+Enter时不发送（允许换行）
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
           />
           <Button 
             type="submit" 

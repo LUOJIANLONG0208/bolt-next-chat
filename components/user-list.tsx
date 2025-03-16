@@ -1,11 +1,13 @@
 'use client';
 
-import { RefreshCw, Users } from 'lucide-react';
+import { RefreshCw, Users, Bell } from 'lucide-react';
 import { User } from './chat';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { checkNotificationSupport, requestNotificationPermission } from '@/lib/notification';
 
 interface UserListProps {
   users: User[];
@@ -21,10 +23,31 @@ export function UserList({
   currentUser,
 }: UserListProps) {
   const onlineUsers = users.filter((user) => user.id !== currentUser.id);
+  const [notificationPermission, setNotificationPermission] = useState<string | null>(null);
+  const [notificationSupported, setNotificationSupported] = useState(false);
+
+  // 检查通知权限状态
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isSupported = checkNotificationSupport();
+      setNotificationSupported(isSupported);
+      
+      if (isSupported) {
+        setNotificationPermission(Notification.permission);
+      }
+    }
+  }, []);
 
   const handleRescan = () => {
     // Force a new discovery announcement
     window.location.reload();
+  };
+
+  const handleRequestPermission = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      setNotificationPermission('granted');
+    }
   };
 
   return (
@@ -37,14 +60,27 @@ export function UserList({
         <p className="text-sm text-muted-foreground mb-4">
           在局域网中发现 {onlineUsers.length} 个用户
         </p>
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
-          onClick={handleRescan}
-        >
-          <RefreshCw className="h-4 w-4" />
-          扫描网络
-        </Button>
+        <div className="flex flex-col space-y-2">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={handleRescan}
+          >
+            <RefreshCw className="h-4 w-4" />
+            扫描网络
+          </Button>
+          
+          {notificationSupported && notificationPermission !== 'granted' && (
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={handleRequestPermission}
+            >
+              <Bell className="h-4 w-4" />
+              开启消息通知
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="p-4 flex-1 overflow-hidden">
@@ -72,8 +108,15 @@ export function UserList({
                       )}
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">点击开始聊天</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{user.name}</p>
+                        {user.hasUnread && (
+                          <span className="h-4 w-4 rounded-full bg-red-500 flex-shrink-0 ml-2 animate-pulse" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {user.hasUnread ? '有新消息' : '点击开始聊天'}
+                      </p>
                     </div>
                   </button>
                 ))}

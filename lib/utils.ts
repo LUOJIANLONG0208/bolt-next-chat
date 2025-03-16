@@ -13,17 +13,28 @@ export function generateUUID() {
   });
 }
 
-let userCounter = 0;
+// 获取设备唯一标识符
+function getDeviceId() {
+  if (typeof window === 'undefined') return generateUUID();
+  
+  // 尝试从 localStorage 获取设备 ID
+  let deviceId = localStorage.getItem('deviceId');
+  
+  // 如果没有，则生成一个新的并保存
+  if (!deviceId) {
+    deviceId = generateUUID();
+    localStorage.setItem('deviceId', deviceId);
+  }
+  
+  return deviceId;
+}
 
 export function generateName(): string {
-  // Get the counter from localStorage or initialize it
-  if (typeof window !== 'undefined') {
-    const storedCounter = localStorage.getItem('userCounter');
-    userCounter = storedCounter ? parseInt(storedCounter, 10) : 0;
-    userCounter++;
-    localStorage.setItem('userCounter', userCounter.toString());
-  }
-  return `user${userCounter.toString().padStart(3, '0')}`;
+  // 获取设备 ID 的后 4 位
+  const deviceId = getDeviceId();
+  const lastFourChars = deviceId.slice(-4);
+  
+  return `user${lastFourChars}`;
 }
 
 export function getUserData() {
@@ -31,7 +42,13 @@ export function getUserData() {
   
   const userData = localStorage.getItem('user');
   if (userData) {
-    return JSON.parse(userData);
+    const parsedUser = JSON.parse(userData);
+    // 确保用户数据包含 hasUnread 属性
+    if (parsedUser.hasUnread === undefined) {
+      parsedUser.hasUnread = false;
+      localStorage.setItem('user', JSON.stringify(parsedUser));
+    }
+    return parsedUser;
   }
   
   // Generate new user data only if it doesn't exist
@@ -40,6 +57,7 @@ export function getUserData() {
     name: generateName(),
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${generateUUID()}`,
     online: true,
+    hasUnread: false,
   };
   
   localStorage.setItem('user', JSON.stringify(newUser));

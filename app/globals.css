@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 防止移动端输入框聚焦时网页放大 */
+input, textarea, select, button {
+  font-size: 16px !important; /* 确保字体大小足够大，防止 iOS 缩放 */
+}
+
+html {
+  touch-action: manipulation; /* 防止双击缩放 */
+  -webkit-text-size-adjust: 100%; /* 防止 iOS 文本大小调整 */
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

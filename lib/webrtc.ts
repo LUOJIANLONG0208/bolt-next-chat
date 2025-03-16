@@ -124,7 +124,8 @@ export class WebRTCService {
         id: this.localId,
         name: 'User ' + this.localId,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.localId}`,
-        online: true
+        online: true,
+        hasUnread: false
       };
       
       if (userData) {
@@ -132,7 +133,8 @@ export class WebRTCService {
           const parsedUser = JSON.parse(userData);
           userInfo = {
             ...parsedUser,
-            online: true
+            online: true,
+            hasUnread: parsedUser.hasUnread !== undefined ? parsedUser.hasUnread : false
           };
         } catch (error) {
           console.error('Error parsing user data:', error);
@@ -200,9 +202,15 @@ export class WebRTCService {
   }
 
   broadcastUserInfo(user: User) {
+    // 确保用户对象包含 hasUnread 属性
+    const userWithHasUnread = {
+      ...user,
+      hasUnread: user.hasUnread !== undefined ? user.hasUnread : false
+    };
+    
     const data = JSON.stringify({
       type: 'USER_INFO',
-      user,
+      user: userWithHasUnread,
     });
 
     this.peers.forEach((peer, peerId) => {
