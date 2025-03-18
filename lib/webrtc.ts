@@ -4,7 +4,7 @@ import SimplePeer from 'simple-peer';
 import { io, Socket } from 'socket.io-client';
 import { User, Message } from '@/components/chat';
 
-const SIGNALING_SERVER = 'http://192.168.3.56:3001';
+const SIGNALING_SERVER = typeof window !== 'undefined' ? window.location.origin : '';
 
 const ICE_SERVERS = {
   iceServers: [
